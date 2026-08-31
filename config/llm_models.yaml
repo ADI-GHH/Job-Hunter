@@ -1,0 +1,38 @@
+# ============================================================
+# JobHunter LLM Router configuration
+# All deployments share the alias "jobhunter" and are
+# load-balanced via usage-based-routing-v2.
+# Secrets use ${ENV_VAR} syntax, resolved at startup.
+# ============================================================
+
+# Single generic alias for the whole app.
+# The application only ever calls model="jobhunter".
+default_alias: jobhunter
+
+model_list:
+  # --- Google AI Studio (Gemini) primary group ---
+  - model_name: jobhunter
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: ${GEMINI_API_KEY}
+    model_info:
+      rpm_limit: 15
+      tpm_limit: 250000
+      # rpd_limit: <requests per day>      # optional, add when needed
+      # tpd_limit: <tokens per day>        # optional, add when needed
+
+  - model_name: jobhunter
+    litellm_params:
+      model: gemini/gemma-4-26b-a4b-it
+      api_key: ${GEMINI_API_KEY}
+    model_info:
+      rpm_limit: 30
+      tpm_limit: 16000
+
+  - model_name: jobhunter
+    litellm_params:
+      model: gemini/gemma-4-31b-it
+      api_key: ${GEMINI_API_KEY}
+    model_info:
+      rpm_limit: 30
+      tpm_limit: 16000

@@ -1,0 +1,31 @@
+# ============================================================
+# JobHunter - Phase 1 Compose (single-service orchestration)
+# Usage:  docker compose up --build
+# ============================================================
+services:
+  jobhunter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jobhunter
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      # Live-mount source for development hot-editing (specific folders to avoid overwriting career-ops)
+      - ./agents:/app/agents
+      - ./api:/app/api
+      - ./frontend:/app/frontend
+      - ./config:/app/config
+      # Persist generated LaTeX/PDF assets to the host
+      - ./data/output:/app/data/output
+      # Persist runtime + scan logs to the host
+      - ./data/logs:/app/data/logs
+      # Persist uploaded CVs
+      - ./data/uploads:/app/data/uploads
+    restart: unless-stopped
+    shm_size: "1gb"
+

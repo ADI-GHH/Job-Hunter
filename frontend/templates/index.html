@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JobHunter — AI Job Search Agent</title>
+
+  <!-- TailwindCSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- JetBrains Mono for the console -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: "#0D1117",
+            surface: "#161B22",
+            border: "#30363D",
+            accent: "#58A6FF",
+            success: "#3FB950",
+            danger: "#F85149",
+            warn: "#D29922",
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            mono: ["'JetBrains Mono'", "monospace"],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body { background-color: #0D1117; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0D1117; }
+    ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #58A6FF; }
+
+    /* Blinking console cursor */
+    .cursor-blink {
+      display: inline-block;
+      width: 8px;
+      height: 1rem;
+      background: #3FB950;
+      margin-left: 2px;
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .drawer-collapsed { transform: translateY(calc(100% - 42px)); }
+    .drop-active { border-color: #58A6FF !important; background: rgba(88,166,255,0.08); }
+  </style>
+</head>
+
+<body class="font-sans text-gray-200 h-screen overflow-hidden">
+  <div class="flex h-full">
+    <!-- ============================================================ -->
+    <!-- LEFT SIDEBAR: Intake Form                                    -->
+    <!-- ============================================================ -->
+    <aside class="w-[360px] shrink-0 bg-surface border-r border-border flex flex-col">
+      <div class="px-6 py-5 border-b border-border flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-accent/20 flex items-center justify-center">
+          <span class="text-accent text-xl font-bold">◎</span>
+        </div>
+        <div>
+          <h1 class="text-lg font-semibold text-white leading-tight">JobHunter</h1>
+          <p class="text-xs text-gray-500">Universal AI Job Agent</p>
+        </div>
+      </div>
+
+      <form id="scanForm" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <!-- Resume upload -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            Base Resume
+          </label>
+          <div
+            id="dropZone"
+            class="border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer transition hover:border-accent"
+          >
+            <input id="resumeInput" type="file" accept=".pdf,.docx" class="hidden" />
+            <div id="dropText">
+              <p class="text-3xl mb-2 text-gray-600">⬆</p>
+              <p class="text-sm text-gray-300">Drag &amp; drop your CV</p>
+              <p class="text-xs text-gray-500 mt-1">or click to browse (.pdf / .docx)</p>
+            </div>
+            <div id="fileChip" class="hidden">
+              <p class="text-sm text-accent font-medium truncate" id="fileName"></p>
+              <p class="text-xs text-gray-500 mt-1">Click to replace</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target role -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            Target Role
+          </label>
+          <input
+            id="targetRole"
+            type="text"
+            required
+            placeholder="Software Engineer Intern"
+            class="w-full bg-navy border border-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          />
+        </div>
+
+        <!-- Location -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            Location
+          </label>
+          <input
+            id="location"
+            type="text"
+            required
+            placeholder="London, UK or Remote"
+            class="w-full bg-navy border border-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          />
+        </div>
+
+        <!-- Internship -->
+        <div class="flex items-start">
+          <div class="flex-shrink-0 h-5 w-5">
+            <input
+              id="isInternship"
+              type="checkbox"
+              class="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded"
+            />
+          </div>
+          <div class="ml-3 text-sm pt-0.5">
+            <label for="isInternship" class="font-semibold text-white mb-0">
+              Internship
+            </label>
+            <p class="text-xs text-gray-500">
+              Filter for internship/entry-level positions only
+            </p>
+          </div>
+        </div>
+
+        <!-- Story bank -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            Story Bank
+          </label>
+          <textarea
+            id="storyBank"
+            rows="6"
+            placeholder="Paste 3–5 of your best career stories here. These anchor the AI and prevent hallucination."
+            class="w-full bg-navy border border-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none"
+          ></textarea>
+        </div>
+
+        <!-- Submit -->
+        <button
+          id="startBtn"
+          type="submit"
+          class="w-full bg-accent hover:bg-accent/90 text-navy font-semibold rounded-lg py-3 text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          ▶ Start Scan
+        </button>
+
+        <!-- Status pill -->
+        <div id="statusPill" class="hidden text-center">
+          <span
+            id="statusPillInner"
+            class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
+          >
+            <span id="statusDot" class="w-2 h-2 rounded-full"></span>
+            <span id="statusText"></span>
+          </span>
+        </div>
+      </form>
+    </aside>
+
+    <!-- ============================================================ -->
+    <!-- RIGHT MAIN: Results                                          -->
+    <!-- ============================================================ -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+      <div class="px-8 py-5 border-b border-border flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-white">Results</h2>
+          <p class="text-xs text-gray-500">Live matches stream in as the pipeline runs</p>
+        </div>
+        <div class="flex gap-4 text-xs">
+          <span class="text-success">● <span id="alignedCount">0</span> Aligned</span>
+          <span class="text-danger">● <span id="rejectedCount">0</span> Rejected</span>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-8 py-6 pb-16">
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Aligned column -->
+          <section>
+            <h3 class="text-sm font-semibold text-success mb-3 flex items-center gap-2">
+              <span>✓ Highly Aligned</span>
+              <span class="text-xs text-gray-500">(score ≥ 7)</span>
+            </h3>
+            <div id="alignedList" class="space-y-3">
+              <p class="text-xs text-gray-600 italic" id="alignedEmpty">No matches yet.</p>
+            </div>
+          </section>
+
+          <!-- Rejected column -->
+          <section>
+            <h3 class="text-sm font-semibold text-danger mb-3">✕ Rejected</h3>
+            <div id="rejectedList" class="space-y-3">
+              <p class="text-xs text-gray-600 italic" id="rejectedEmpty">Nothing rejected yet.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- BOTTOM DRAWER: Live Console                                  -->
+  <!-- ============================================================ -->
+  <div
+    id="consoleDrawer"
+    class="fixed bottom-0 left-0 right-0 h-64 bg-black border-t border-border transition-transform duration-300 z-40 drawer-collapsed"
+  >
+    <div
+      id="consoleHeader"
+      class="h-[42px] px-4 flex items-center justify-between cursor-pointer bg-surface border-b border-border select-none"
+    >
+      <div class="flex items-center gap-2">
+        <span class="text-success font-mono text-xs">●</span>
+        <span class="text-xs font-mono text-gray-300">Live Console</span>
+      </div>
+      <span id="drawerToggle" class="text-xs text-gray-500 font-mono">▲ expand</span>
+    </div>
+    <div
+      id="consoleBody"
+      class="h-[calc(100%-42px)] overflow-y-auto px-4 py-3 font-mono text-xs leading-relaxed bg-black"
+    >
+      <div id="consoleLines"></div>
+      <div class="flex items-center">
+        <span class="text-success">$</span>
+        <span class="cursor-blink"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VANILLA JS                                                   -->
+  <!-- ============================================================ -->
+  <script>
+    (() => {
+      "use strict";
+
+      // ---- Element refs ----
+      const form = document.getElementById("scanForm");
+      const resumeInput = document.getElementById("resumeInput");
+      const dropZone = document.getElementById("dropZone");
+      const dropText = document.getElementById("dropText");
+      const fileChip = document.getElementById("fileChip");
+      const fileName = document.getElementById("fileName");
+      const startBtn = document.getElementById("startBtn");
+
+      const statusPill = document.getElementById("statusPill");
+      const statusPillInner = document.getElementById("statusPillInner");
+      const statusDot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+
+      const alignedList = document.getElementById("alignedList");
+      const rejectedList = document.getElementById("rejectedList");
+      const alignedEmpty = document.getElementById("alignedEmpty");
+      const rejectedEmpty = document.getElementById("rejectedEmpty");
+      const alignedCount = document.getElementById("alignedCount");
+      const rejectedCount = document.getElementById("rejectedCount");
+
+      const drawer = document.getElementById("consoleDrawer");
+      const drawerHeader = document.getElementById("consoleHeader");
+      const drawerToggle = document.getElementById("drawerToggle");
+      const consoleLines = document.getElementById("consoleLines");
+      const consoleBody = document.getElementById("consoleBody");
+
+      let ws = null;
+      let selectedFile = null;
+      let counts = { aligned: 0, rejected: 0 };
+
+      // ---- Console drawer toggle ----
+      let drawerOpen = false;
+      drawerHeader.addEventListener("click", () => {
+        drawerOpen = !drawerOpen;
+        drawer.classList.toggle("drawer-collapsed", !drawerOpen);
+        drawerToggle.textContent = drawerOpen ? "▼ collapse" : "▲ expand";
+      });
+      function openDrawer() {
+        if (!drawerOpen) {
+          drawerOpen = true;
+          drawer.classList.remove("drawer-collapsed");
+          drawerToggle.textContent = "▼ collapse";
+        }
+      }
+
+      // ---- File selection / drag-drop ----
+      dropZone.addEventListener("click", () => resumeInput.click());
+      resumeInput.addEventListener("change", (e) => {
+        if (e.target.files.length) setFile(e.target.files[0]);
+      });
+      ["dragenter", "dragover"].forEach((evt) =>
+        dropZone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropZone.classList.add("drop-active");
+        })
+      );
+      ["dragleave", "drop"].forEach((evt) =>
+        dropZone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          dropZone.classList.remove("drop-active");
+        })
+      );
+      dropZone.addEventListener("drop", (e) => {
+        const f = e.dataTransfer.files[0];
+        if (f) setFile(f);
+      });
+      function setFile(file) {
+        const ok = /\.(pdf|docx)$/i.test(file.name);
+        if (!ok) {
+          logLine("ERROR", `Rejected '${file.name}': only .pdf/.docx allowed`);
+          openDrawer();
+          return;
+        }
+        selectedFile = file;
+        fileName.textContent = file.name;
+        dropText.classList.add("hidden");
+        fileChip.classList.remove("hidden");
+      }
+
+      // ---- Status pill ----
+      function setStatus(state) {
+        statusPill.classList.remove("hidden");
+        const map = {
+          running: ["bg-accent/15", "text-accent", "bg-accent", "Running…"],
+          done: ["bg-success/15", "text-success", "bg-success", "Completed"],
+          error: ["bg-danger/15", "text-danger", "bg-danger", "Error"],
+        };
+        const [bg, txt, dot, label] = map[state] || map.running;
+        statusPillInner.className =
+          "inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium " +
+          bg + " " + txt;
+        statusDot.className = "w-2 h-2 rounded-full " + dot;
+        statusText.textContent = label;
+
+        if (state === "running") {
+          startBtn.disabled = true;
+          startBtn.textContent = "⏳ Scanning…";
+        } else {
+          startBtn.disabled = false;
+          startBtn.textContent = "▶ Start Scan";
+        }
+      }
+
+      // ---- Console logging ----
+      const LEVEL_COLORS = {
+        INFO: "text-gray-300",
+        WARN: "text-warn",
+        WARNING: "text-warn",
+        ERROR: "text-danger",
+        SUCCESS: "text-success",
+        DEBUG: "text-gray-500",
+      };
+      function logLine(level, message, timestamp) {
+        const row = document.createElement("div");
+        row.className = "flex gap-2 whitespace-pre-wrap break-words";
+        const ts = timestamp
+          ? new Date(timestamp).toLocaleTimeString()
+          : new Date().toLocaleTimeString();
+        const color = LEVEL_COLORS[(level || "INFO").toUpperCase()] || "text-gray-300";
+        row.innerHTML =
+          `<span class="text-gray-600">${ts}</span>` +
+          `<span class="${color} font-medium">[${(level || "INFO").toUpperCase()}]</span>` +
+          `<span class="${color}"></span>`;
+        row.lastChild.textContent = message;
+        consoleLines.appendChild(row);
+        consoleBody.scrollTop = consoleBody.scrollHeight;
+      }
+
+      // ---- Result cards ----
+      function addResult(job) {
+        const score = Number(job.score ?? 0);
+        const aligned = score >= 7;
+        const list = aligned ? alignedList : rejectedList;
+        (aligned ? alignedEmpty : rejectedEmpty)?.remove();
+
+        const card = document.createElement("div");
+        card.className =
+          "bg-surface border rounded-xl p-4 " +
+          (aligned ? "border-success/30" : "border-danger/20");
+
+        const scoreBadge = aligned
+          ? `<span class="text-success font-bold text-sm">${score}/10</span>`
+          : `<span class="text-danger font-bold text-sm">${score}/10</span>`;
+
+        // Source channel badge
+        const sourceChannelBadge = job.source_channel
+          ? `<span class="text-xs font-medium px-2 py-0.5 bg-accent/20 text-accent rounded-full">${escapeHtml(job.source_channel)}</span>`
+          : "";
+
+        const contact =
+          job.contact_email
+            ? `<a href="mailto:${escapeHtml(job.contact_email)}" class="text-accent text-xs hover:underline">✉ ${escapeHtml(job.contact_email)}</a>`
+            : "";
+
+        const dlBtn =
+          aligned && job.cv_path
+            ? `<button data-path="${escapeHtml(job.cv_path)}"
+                  class="dl-btn mt-3 w-full bg-accent/15 hover:bg-accent/25 text-accent text-xs font-medium rounded-lg py-2 transition">
+                  ↓ Custom CV
+               </button>`
+            : "";
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex flex-col">
+              <p class="text-sm font-semibold text-white truncate">${escapeHtml(job.title || "Untitled role")}</p>
+              <div class="flex items-center gap-1 mt-0.5">
+                <p class="text-xs text-gray-400 truncate">${escapeHtml(job.company || "Unknown company")}</p>
+                ${sourceChannelBadge}
+              </div>
+            </div>
+            ${scoreBadge}
+          </div>
+          <p class="text-xs text-gray-400 mt-2 leading-relaxed">${escapeHtml(job.reasoning || "")}</p>
+          <div class="mt-2 flex items-center justify-between">
+            ${job.url ? `<a href="${escapeHtml(job.url)}" target="_blank" rel="noopener" class="text-accent text-xs hover:underline">View posting ↗</a>` : "<span></span>"}
+            ${contact}
+          </div>
+          ${dlBtn}
+        `;
+        list.appendChild(card);
+
+        const btn = card.querySelector(".dl-btn");
+        if (btn) {
+          btn.addEventListener("click", () => {
+            const p = btn.getAttribute("data-path");
+            window.location.href = "/api/download?path=" + encodeURIComponent(p);
+          });
+        }
+
+        counts[aligned ? "aligned" : "rejected"]++;
+        alignedCount.textContent = counts.aligned;
+        rejectedCount.textContent = counts.rejected;
+      }
+
+      function escapeHtml(s) {
+        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+        }[c]));
+      }
+
+      // ---- WebSocket ----
+      function connectWs(sessionId) {
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        ws = new WebSocket(`${proto}://${location.host}/ws/${sessionId}`);
+
+        ws.onopen = () => logLine("SUCCESS", "WebSocket connected.");
+        ws.onclose = () => logLine("WARN", "WebSocket closed.");
+        ws.onerror = () => logLine("ERROR", "WebSocket error.");
+        ws.onmessage = (evt) => {
+          let msg;
+          try { msg = JSON.parse(evt.data); } catch { return; }
+
+          switch (msg.type) {
+            case "log":
+              logLine(msg.level, msg.message, msg.timestamp);
+              break;
+            case "result":
+              addResult(msg.job || {});
+              break;
+            case "status":
+              setStatus(msg.state);
+              break;
+            case "ping":
+              // Heartbeat from server; reply to keep the socket lively.
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "pong" }));
+              }
+              break;
+          }
+        };
+      }
+
+      // ---- Form submit ----
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!selectedFile) {
+          logLine("ERROR", "Please attach a resume (.pdf/.docx) first.");
+          openDrawer();
+          return;
+        }
+
+        // Reset results
+        counts = { aligned: 0, rejected: 0 };
+        alignedCount.textContent = "0";
+        rejectedCount.textContent = "0";
+        alignedList.innerHTML = '<p class="text-xs text-gray-600 italic">No matches yet.</p>';
+        rejectedList.innerHTML = '<p class="text-xs text-gray-600 italic">Nothing rejected yet.</p>';
+        consoleLines.innerHTML = "";
+        openDrawer();
+
+        const fd = new FormData();
+        fd.append("resume", selectedFile);
+        fd.append("target_role", document.getElementById("targetRole").value);
+        fd.append("location", document.getElementById("location").value);
+        fd.append("story_bank", document.getElementById("storyBank").value);
+        fd.append("is_internship", document.getElementById("isInternship").checked);
+
+        setStatus("running");
+        logLine("INFO", "Submitting scan request…");
+
+        try {
+          const res = await fetch("/api/scan/start", { method: "POST", body: fd });
+          if (res.status !== 202) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+          }
+          const data = await res.json();
+          logLine("SUCCESS", `Scan accepted. Session: ${data.session_id}`);
+          connectWs(data.session_id);
+        } catch (err) {
+          logLine("ERROR", `Failed to start scan: ${err.message}`);
+          setStatus("error");
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

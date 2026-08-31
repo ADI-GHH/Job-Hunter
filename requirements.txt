@@ -1,0 +1,38 @@
+# ============================================================
+# JobHunter - Phase 1 Python Dependencies
+# ============================================================
+
+# --- Web framework / server ---
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9
+aiofiles==24.1.0
+websockets==12.0
+
+# --- Validation / config ---
+pydantic==2.8.2
+pydantic-settings==2.3.4
+python-dotenv==1.0.1
+PyYAML==6.0.1
+
+# --- LLM routing (replaces OmniRoute gateway) ---
+litellm==1.52.3
+
+# --- Job sourcing (Track A: mass market) ---
+python-jobspy==1.1.70
+
+# --- CV parsing ---
+PyPDF2==3.0.1
+pdfplumber==0.11.2
+
+# --- HTTP clients (OSINT + ATS APIs) ---
+requests==2.32.3
+httpx==0.27.0
+beautifulsoup4==4.12.3
+duckduckgo-search==4.1.1
+
+# --- Real-time TSV-to-UI sync ---
+watchdog==4.0.1
+
+# --- Headless DOM liveness verification ---
+playwright==1.45.0
